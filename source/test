@@ -1,0 +1,7 @@
+resetCanvas 600 600
+setColor 255 0 0
+drawLine line0 0 0 100 200 Bresenham
+drawLine line1 0 0 200 100 Bresenham
+drawLine line2 0 100 200 0 Bresenham
+drawLine line3 0 200 100 0 Bresenham
+saveCanvas 2
