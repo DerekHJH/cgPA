@@ -188,30 +188,30 @@ def draw_ellipse(p_list):
 
     rx2 = rx * rx
     ry2 = ry * ry
-    p = ry2 - rx2 * ry + rx2 / 4
+    p = ry2 * 4 - rx2 * ry * 4 + rx2
     x = 0
     y = ry
     
     while ry2 * x < rx2 * y:
         result.append([x, y])
         if p < 0 :
-            p = p + 2 * ry2 * x + 3 * ry2
+            p = p + 8 * ry2 * x + 12 * ry2
             x = x + 1
             y = y
         else:
-            p = p + 2 * ry2 * x - 2 * rx2 * y + 2 * rx2 + 3 * ry2
+            p = p + 8 * ry2 * x - 8 * rx2 * y + 8 * rx2 + 12 * ry2
             x = x + 1
             y = y - 1
-        
-    p = ry2 * (x + 0.5)**2 + rx2 * (y - 1) - rx2 * ry2
+
+    p = ry2 * (2 * x + 1)**2 + rx2 * (y - 1)**2 * 4 - rx2 * ry2 * 4
     while y >= 0:
         result.append([x, y])
         if p < 0:
-            p = p - 2 * rx2 * y + 3 * rx2
+            p = p + 8 * ry2 * x - 8 * rx2 * y + 8 * ry2 + 12 * rx2
             x = x + 1
             y = y - 1
         else:
-            p = p + 2 * ry2 * x - 2 * rx2 * y + 2 * ry2 + 3 * rx2
+            p = p - 8 * rx2 * y + 12 * rx2
             x = x
             y = y - 1
             
@@ -219,7 +219,6 @@ def draw_ellipse(p_list):
     resulty = symmetry(result, 'y')
     result = result + resultx + resulty + symmetry(resultx, 'y')
     result = translate(result, xc, yc)
-    print()
     return result
 
 def draw_curve(p_list, algorithm):

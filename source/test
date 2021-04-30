@@ -5,6 +5,10 @@ drawLine line1 0 0 200 100 Bresenham
 drawLine line2 0 100 200 0 Bresenham
 drawLine line3 0 200 100 0 Bresenham
 saveCanvas 2
+
 setColor 0 0 0
-drawEllipse ellipse0 0 0 200 100
+drawEllipse ellipse0 0 0 100 200 
+drawEllipse ellipse1 0 0 200 100
+drawEllipse ellipse2 0 100 200 0 
+drawEllipse ellipse3 0 200 100 0 
 saveCanvas 3
