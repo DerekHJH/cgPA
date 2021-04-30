@@ -4,6 +4,17 @@
 # 本文件只允许依赖math库
 import math
 
+
+def symmetry(p_list, axis):
+	result = []
+	if(axis == 'x'):
+		for x, y in p_list:
+			result.append([x, -y])
+	else:
+		for x, y in p_list:
+			result.append([-x, y])
+	return result
+
 def draw_line(p_list, algorithm):
     """绘制线段
 
@@ -167,8 +178,49 @@ def draw_ellipse(p_list):
     :param p_list: (list of list of int: [[x0, y0], [x1, y1]]) 椭圆的矩形包围框左上角和右下角顶点坐标
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1], [x_2, y_2], ...]) 绘制结果的像素点坐标列表
     """
-    pass
+    x0, y0 = p_list[0]
+    x1, y1 = p_list[1]
+    result = []
+    xc = (x0 + x1) // 2
+    yc = (y0 + y1) // 2
+    rx = abs(x1 - x0) // 2
+    ry = abs(y1 - y0) // 2
 
+    rx2 = rx * rx
+    ry2 = ry * ry
+    p = ry2 - rx2 * ry + rx2 / 4
+    x = 0
+    y = ry
+    
+    while ry2 * x < rx2 * y:
+        result.append([x, y])
+        if p < 0 :
+            p = p + 2 * ry2 * x + 3 * ry2
+            x = x + 1
+            y = y
+        else:
+            p = p + 2 * ry2 * x - 2 * rx2 * y + 2 * rx2 + 3 * ry2
+            x = x + 1
+            y = y - 1
+        
+    p = ry2 * (x + 0.5)**2 + rx2 * (y - 1) - rx2 * ry2
+    while y >= 0:
+        result.append([x, y])
+        if p < 0:
+            p = p - 2 * rx2 * y + 3 * rx2
+            x = x + 1
+            y = y - 1
+        else:
+            p = p + 2 * ry2 * x - 2 * rx2 * y + 2 * ry2 + 3 * rx2
+            x = x
+            y = y - 1
+            
+    resultx = symmetry(result, 'x')
+    resulty = symmetry(result, 'y')
+    result = result + resultx + resulty + symmetry(resultx, 'y')
+    result = translate(result, xc, yc)
+    print()
+    return result
 
 def draw_curve(p_list, algorithm):
     """绘制曲线
@@ -188,7 +240,10 @@ def translate(p_list, dx, dy):
     :param dy: (int) 垂直方向平移量
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1], [x_2, y_2], ...]) 变换后的图元参数
     """
-    pass
+    result = []
+    for x, y in p_list:
+        result.append([x + dx, y + dy])
+    return result
 
 
 def rotate(p_list, x, y, r):
@@ -227,3 +282,4 @@ def clip(p_list, x_min, y_min, x_max, y_max, algorithm):
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1]]) 裁剪后线段的起点和终点坐标
     """
     pass
+
