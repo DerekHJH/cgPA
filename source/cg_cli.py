@@ -69,6 +69,27 @@ if __name__ == '__main__':
                 x1 = int(line[4])
                 y1 = int(line[5])
                 item_dict[item_id] = ['ellipse', [[x0, y0], [x1, y1]], 0, np.array(pen_color)]
+            elif line[0] == 'translate':
+                item_id = line[1]
+                dx = int(line[2])
+                dy = int(line[3])
+                p_list = item_dict[item_id][1].copy()
+                item_dict[item_id][1] = alg.translate(p_list, dx, dy)
+            elif line[0] == 'rotate':
+                item_id = line[1]
+                xc = int(line[2])
+                yc = int(line[3])
+                angle = int(line[4])
+                p_list = item_dict[item_id][1].copy()
+                item_dict[item_id][1] = alg.rotate(p_list, xc, yc, angle)
+            elif line[0] == 'scale':
+                item_id = line[1]
+                xc = int(line[2])
+                yc = int(line[3])
+                s = float(line[4])
+                p_list = item_dict[item_id][1].copy()
+                item_dict[item_id][1] = alg.scale(p_list, xc, yc, s)
+                
 
 
             line = fp.readline()

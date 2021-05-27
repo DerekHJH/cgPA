@@ -1,14 +1,18 @@
-resetCanvas 600 600
+resetCanvas 800 800
 setColor 255 0 0
 drawLine line0 0 0 100 200 Bresenham
 drawLine line1 0 0 200 100 Bresenham
 drawLine line2 0 100 200 0 Bresenham
 drawLine line3 0 200 100 0 Bresenham
+rotate line0 0 0 45
 saveCanvas 2
 
 setColor 0 0 0
 drawEllipse ellipse0 0 0 100 200 
 drawEllipse ellipse1 0 0 200 100
-drawEllipse ellipse2 0 100 200 0 
-drawEllipse ellipse3 0 200 100 0 
+drawEllipse ellipse2 100 100 500 500
+translate ellipse0 100 100
+scale ellipse1 0 0 3
+scale ellipse2 300 300 0.5
 saveCanvas 3
+

@@ -245,28 +245,36 @@ def translate(p_list, dx, dy):
     return result
 
 
-def rotate(p_list, x, y, r):
+def rotate(p_list, xc, yc, angle):
     """旋转变换（除椭圆外）
 
     :param p_list: (list of list of int: [[x0, y0], [x1, y1], [x2, y2], ...]) 图元参数
-    :param x: (int) 旋转中心x坐标
-    :param y: (int) 旋转中心y坐标
-    :param r: (int) 顺时针旋转角度（°）
+    :param xc: (int) 旋转中心x坐标
+    :param yc: (int) 旋转中心y坐标
+    :param angle: (int) 顺时针旋转角度（°）
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1], [x_2, y_2], ...]) 变换后的图元参数
     """
-    pass
+    theta = math.radians(angle)
+    result = []
+    for x, y in p_list:
+        result.append([int(xc + (x - xc) * math.cos(theta) + (y - yc) * math.sin(theta)),
+                       int(yc - (x - xc) * math.sin(theta) + (y - yc) * math.cos(theta))])
+    return result
 
 
-def scale(p_list, x, y, s):
+def scale(p_list, xc, yc, s):
     """缩放变换
 
     :param p_list: (list of list of int: [[x0, y0], [x1, y1], [x2, y2], ...]) 图元参数
-    :param x: (int) 缩放中心x坐标
-    :param y: (int) 缩放中心y坐标
+    :param xc: (int) 缩放中心x坐标
+    :param yc: (int) 缩放中心y坐标
     :param s: (float) 缩放倍数
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1], [x_2, y_2], ...]) 变换后的图元参数
     """
-    pass
+    result = []
+    for x, y in p_list:
+        result.append([int(x * s + xc * (1 - s)), int(y * s + yc * (1 - s))])
+    return result
 
 
 def clip(p_list, x_min, y_min, x_max, y_max, algorithm):
