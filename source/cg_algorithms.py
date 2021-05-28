@@ -277,7 +277,7 @@ def scale(p_list, xc, yc, s):
     return result
 
 
-def clip(p_list, x_min, y_min, x_max, y_max, algorithm):
+def clip(p_list, x0, y0, x1, y1, algorithm):
     """线段裁剪
 
     :param p_list: (list of list of int: [[x0, y0], [x1, y1]]) 线段的起点和终点坐标
@@ -288,5 +288,74 @@ def clip(p_list, x_min, y_min, x_max, y_max, algorithm):
     :param algorithm: (string) 使用的裁剪算法，包括'Cohen-Sutherland'和'Liang-Barsky'
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1]]) 裁剪后线段的起点和终点坐标
     """
-    pass
-
+    x_min = min(x0, x1)
+    x_max = max(x0, x1)
+    y_min = min(y0, y1)
+    y_max = max(y0, y1)
+    result = []
+    x0, y0 = p_list[0]
+    x1, y1 = p_list[1]
+    if x0 > x1:
+        x0, y0, x1, y1 = x1, y1, x0, y0
+    '''        
+        0
+     3     1
+        2
+    '''
+    if algorithm == 'Cohen-Sutherland':
+        area_code0 = ((y0 > y_max) | ((x0 > x_max) << 1) | ((y0 < y_min) << 2) | ((x0 < x_min) << 3))
+        area_code1 = ((y1 > y_max) | ((x1 > x_max) << 1) | ((y1 < y_min) << 2) | ((x1 < x_min) << 3))
+        if (area_code0 | area_code1) == 0:
+            result = [[x0, y0], [x1, y1]]
+            return result
+        
+        if (area_code0 & area_code1) != 0:
+            return result
+        
+        if x0 == x1:
+            if y0 > y1:
+                x0, y0, x1, y1 = x1, y1, x0, y0
+            result = [[x0, max(y0, y_min)], [x1, min(y1, y_min)]]
+            return result
+    
+        if y0 == y1:
+            result = [[max(x0, x_min), y0], [min(x1, x_max), y1]]
+            return result
+    
+        dx = x1 - x0
+        dy = y1 - y0
+        m = dy / dx
+        mT = dx / dy
+        
+        area_diff = area_code0 ^ area_code1
+        
+        for i in range(3):
+            if area_diff & (1 << i) and i == 0:
+                if y0 > y1:
+                    x0 = int(x0 + mT * (y_max - y0))
+                    y0 = y_max
+                else:
+                    x1 = int(x1 + mT * (y_max - y1))
+                    y1 = y_max
+            elif area_diff & (1 << i) and i == 1:
+                y1 = int(y1 + m * (x_max - x1))
+                x1 = x_max
+            elif area_diff & (1 << i) and i == 2:
+                if y0 > y1:
+                    x1 = int(x1 + mT * (y_min - y1))
+                    y1 = y_min
+                else:
+                    x0 = int(x0 + mT * (y_min - y0))
+                    y0 = y_min
+            elif area_diff & (1 << i) and i == 3:
+                y0 = int(y0 + m * (x_min - x0))
+                x0 = x_min
+            area_code0 = ((y0 > y_max) | ((x0 > x_max) << 1) | ((y0 < y_min) << 2) | ((x0 < x_min) << 3))
+            area_code1 = ((y1 > y_max) | ((x1 > x_max) << 1) | ((y1 < y_min) << 2) | ((x1 < x_min) << 3))
+            if (area_code0 | area_code1) == 0:
+                result = [[x0, y0], [x1, y1]]
+                return result
+        
+            if (area_code0 & area_code1) != 0:
+                return result
+            

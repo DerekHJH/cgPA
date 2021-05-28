@@ -5,6 +5,7 @@ drawLine line1 0 0 200 100 Bresenham
 drawLine line2 0 100 200 0 Bresenham
 drawLine line3 0 200 100 0 Bresenham
 rotate line0 0 0 45
+clip line1 20 20 100 100 Cohen-Sutherland
 saveCanvas 2
 
 setColor 0 0 0
