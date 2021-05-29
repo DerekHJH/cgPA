@@ -50,51 +50,51 @@ if __name__ == '__main__':
             elif line[0] == 'drawLine':
                 item_id = line[1]
                 x0 = int(line[2])
-                y0 = int(line[3])
+                y0 = height - 1 - int(line[3])
                 x1 = int(line[4])
-                y1 = int(line[5])
+                y1 = height - 1 - int(line[5])
                 algorithm = line[6]
                 item_dict[item_id] = ['line', [[x0, y0], [x1, y1]], algorithm, np.array(pen_color)]
             elif line[0] == 'drawPolygon':
                 item_id = line[1]
                 p_list = []
-                for i in range(2, len(line) - 1):
-                    p_list.append([int(line[i]), int(line[i + 1])])
+                for i in range(2, len(line) - 1, 2):
+                    p_list.append([int(line[i]), height - 1 - int(line[i + 1])])
                 algorithm = line[len(line) - 1]
                 item_dict[item_id] = ['polygon', p_list, algorithm, np.array(pen_color)]
             elif line[0] == 'drawEllipse':
                 item_id = line[1]
                 x0 = int(line[2])
-                y0 = int(line[3])
+                y0 = height - 1 - int(line[3])
                 x1 = int(line[4])
-                y1 = int(line[5])
+                y1 = height - 1 - int(line[5])
                 item_dict[item_id] = ['ellipse', [[x0, y0], [x1, y1]], 0, np.array(pen_color)]
             elif line[0] == 'translate':
                 item_id = line[1]
                 dx = int(line[2])
-                dy = int(line[3])
+                dy = -int(line[3])
                 p_list = item_dict[item_id][1].copy()
                 item_dict[item_id][1] = alg.translate(p_list, dx, dy)
             elif line[0] == 'rotate':
                 item_id = line[1]
                 xc = int(line[2])
-                yc = int(line[3])
+                yc = height - 1 - int(line[3])
                 angle = int(line[4])
                 p_list = item_dict[item_id][1].copy()
                 item_dict[item_id][1] = alg.rotate(p_list, xc, yc, angle)
             elif line[0] == 'scale':
                 item_id = line[1]
                 xc = int(line[2])
-                yc = int(line[3])
+                yc = height - 1 - int(line[3])
                 s = float(line[4])
                 p_list = item_dict[item_id][1].copy()
                 item_dict[item_id][1] = alg.scale(p_list, xc, yc, s)
             elif line[0] == 'clip':
                 item_id = line[1]
                 x0 = int(line[2])
-                y0 = int(line[3])
+                y0 = height - 1 - int(line[3])
                 x1 = int(line[4])
-                y1 = int(line[5])
+                y1 = height - 1 - int(line[5])
                 algorithm = line[6]
                 p_list = item_dict[item_id][1].copy()
                 item_dict[item_id][1] = alg.clip(p_list, x0, y0, x1, y1, algorithm)

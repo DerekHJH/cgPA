@@ -358,4 +358,35 @@ def clip(p_list, x0, y0, x1, y1, algorithm):
         
             if (area_code0 & area_code1) != 0:
                 return result
+    elif algorithm == "Liang-Barsky":
+        dx = x1 - x0
+        dy = y1 - y0
+        u0 = 0
+        u1 = 1
+        p = [-dx, dx, -dy, dy]
+        q = [x0 - x_min, x_max - x0, y0 - y_min, y_max - y0]
+        if dx == 0:
+            for i in [2, 3]:
+                if p[i] < 0:
+                    u0 = max(u0, q[i] / p[i])
+                else:
+                    u1 = min(u1, q[i] / p[i])
+        elif dy == 0:
+            for i in [0, 1]:
+                if p[i] < 0:
+                    u0 = max(u0, q[i] / p[i])
+                else:
+                    u1 = min(u1, q[i] / p[i])
+        else:
+            for i in range(4):
+                if p[i] < 0:
+                    u0 = max(u0, q[i] / p[i])
+                else:
+                    u1 = min(u1, q[i] / p[i])
             
+        if(u0 > u1):
+            return result
+        else:
+            result = [[int(x0 + dx * u0), int(y0 + dy * u0)], 
+                      [int(x0 + dx * u1), int(y0 + dy * u1)]]
+            return result
