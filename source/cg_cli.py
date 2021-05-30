@@ -100,7 +100,13 @@ if __name__ == '__main__':
                 item_dict[item_id][1] = alg.clip(p_list, x0, y0, x1, y1, algorithm)
                 if len(item_dict[item_id][1]) == 0:
                     item_dict.pop(item_id)
-
+            elif line[0] == 'drawCurve':
+                item_id = line[1]
+                p_list = []
+                for i in range(2, len(line) - 1, 2):
+                    p_list.append([int(line[i]), height - 1 - int(line[i + 1])])
+                algorithm = line[len(line) - 1]
+                item_dict[item_id] = ['curve', p_list, algorithm, np.array(pen_color)]
 
             line = fp.readline()
 

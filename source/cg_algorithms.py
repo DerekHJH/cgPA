@@ -221,6 +221,22 @@ def draw_ellipse(p_list):
     result = translate(result, xc, yc)
     return result
 
+def Bezier(p_list, t):
+    xt = [[]]
+    yt = [[]]
+    n = len(p_list) - 1
+    for x, y in p_list:
+        xt[0].append(x)
+        yt[0].append(y)
+    for i in range(1, n + 1):
+        num = n - i + 1
+        xt.append([])
+        yt.append([])
+        for j in range(0, num):
+            xt[i].append(xt[i - 1][j] * (1 - t) + xt[i - 1][j + 1] * t)
+            yt[i].append(yt[i - 1][j] * (1 - t) + yt[i - 1][j + 1] * t)
+    return [int(xt[n][0]), int(yt[n][0])]
+
 def draw_curve(p_list, algorithm):
     """绘制曲线
 
@@ -228,7 +244,11 @@ def draw_curve(p_list, algorithm):
     :param algorithm: (string) 绘制使用的算法，包括'Bezier'和'B-spline'（三次均匀B样条曲线，曲线不必经过首末控制点）
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1], [x_2, y_2], ...]) 绘制结果的像素点坐标列表
     """
-    pass
+    result = []
+    if algorithm == "Bezier":
+        for t in range(0, 1001):
+            result.append(Bezier(p_list, t * 0.001))
+    return result
 
 
 def translate(p_list, dx, dy):
