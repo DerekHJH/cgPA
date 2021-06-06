@@ -35,10 +35,11 @@ class MyCanvas(QGraphicsView):
         self.temp_id = ''
         self.temp_item = None
 
-    def start_draw_line(self, algorithm, item_id):
-        self.status = 'line'
+    def start_draw(self, status, algorithm, item_id):
+        self.status = status
         self.temp_algorithm = algorithm
         self.temp_id = item_id
+    
 
     def finish_draw(self):
         self.temp_id = self.main_window.get_id()
@@ -63,7 +64,7 @@ class MyCanvas(QGraphicsView):
         pos = self.mapToScene(event.localPos().toPoint())
         x = int(pos.x())
         y = int(pos.y())
-        if self.status == 'line':
+        if self.status == 'line' or self.status == 'ellipse':
             self.temp_item = MyItem(self.temp_id, self.status, [[x, y], [x, y]], self.temp_algorithm)
             self.scene().addItem(self.temp_item)
         self.updateScene([self.sceneRect()])
@@ -73,13 +74,13 @@ class MyCanvas(QGraphicsView):
         pos = self.mapToScene(event.localPos().toPoint())
         x = int(pos.x())
         y = int(pos.y())
-        if self.status == 'line':
+        if self.status == 'line' or self.status == 'ellipse':
             self.temp_item.p_list[1] = [x, y]
         self.updateScene([self.sceneRect()])
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        if self.status == 'line':
+        if self.status == 'line' or self.status == 'ellipse':
             self.item_dict[self.temp_id] = self.temp_item
             self.list_widget.addItem(self.temp_id)
             self.finish_draw()
@@ -108,6 +109,7 @@ class MyItem(QGraphicsItem):
 
     def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget] = ...) -> None:
         if self.item_type == 'line':
+            print("in the middle of paint")
             item_pixels = alg.draw_line(self.p_list, self.algorithm)
             for p in item_pixels:
                 painter.drawPoint(*p)
@@ -117,7 +119,12 @@ class MyItem(QGraphicsItem):
         elif self.item_type == 'polygon':
             pass
         elif self.item_type == 'ellipse':
-            pass
+            item_pixels = alg.draw_ellipse(self.p_list)
+            for p in item_pixels:
+                painter.drawPoint(*p)
+            if self.selected:
+                painter.setPen(QColor(255, 0, 0))
+                painter.drawRect(self.boundingRect())
         elif self.item_type == 'curve':
             pass
 
@@ -133,7 +140,13 @@ class MyItem(QGraphicsItem):
         elif self.item_type == 'polygon':
             pass
         elif self.item_type == 'ellipse':
-            pass
+            x0, y0 = self.p_list[0]
+            x1, y1 = self.p_list[1]
+            x = min(x0, x1)
+            y = min(y0, y1)
+            w = max(x0, x1) - x
+            h = max(y0, y1) - y
+            return QRectF(x - 1, y - 1, w + 2, h + 2)
         elif self.item_type == 'curve':
             pass
 
@@ -146,7 +159,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.item_cnt = 0
 
-        # 使用QListWidget来记录已有的图元，并用于选择图元。注：这是图元选择的简单实现方法，更好的实现是在画布中直接用鼠标选择图元
+        # 使用QListWidget来记录已有的图元，并用于选择图元。
+        #注：这是图元选择的简单实现方法，更好的实现是在画布中直接用鼠标选择图元
         self.list_widget = QListWidget(self)
         self.list_widget.setMinimumWidth(200)
 
@@ -160,10 +174,12 @@ class MainWindow(QMainWindow):
 
         # 设置菜单栏
         menubar = self.menuBar()
+        
         file_menu = menubar.addMenu('文件')
         set_pen_act = file_menu.addAction('设置画笔')
         reset_canvas_act = file_menu.addAction('重置画布')
         exit_act = file_menu.addAction('退出')
+        
         draw_menu = menubar.addMenu('绘制')
         line_menu = draw_menu.addMenu('线段')
         line_naive_act = line_menu.addAction('Naive')
@@ -176,17 +192,25 @@ class MainWindow(QMainWindow):
         curve_menu = draw_menu.addMenu('曲线')
         curve_bezier_act = curve_menu.addAction('Bezier')
         curve_b_spline_act = curve_menu.addAction('B-spline')
+        
         edit_menu = menubar.addMenu('编辑')
         translate_act = edit_menu.addAction('平移')
         rotate_act = edit_menu.addAction('旋转')
         scale_act = edit_menu.addAction('缩放')
+        
         clip_menu = edit_menu.addMenu('裁剪')
         clip_cohen_sutherland_act = clip_menu.addAction('Cohen-Sutherland')
         clip_liang_barsky_act = clip_menu.addAction('Liang-Barsky')
 
         # 连接信号和槽函数
         exit_act.triggered.connect(qApp.quit)
+        
         line_naive_act.triggered.connect(self.line_naive_action)
+        line_dda_act.triggered.connect(self.line_dda_action)
+        line_bresenham_act.triggered.connect(self.line_bresenham_action)
+        
+        ellipse_act.triggered.connect(self.ellipse_action)
+        
         self.list_widget.currentTextChanged.connect(self.canvas_widget.selection_changed)
 
         # 设置主窗口的布局
@@ -206,8 +230,26 @@ class MainWindow(QMainWindow):
         return _id
 
     def line_naive_action(self):
-        self.canvas_widget.start_draw_line('Naive', self.get_id())
+        self.canvas_widget.start_draw('line', 'Naive', self.get_id())
         self.statusBar().showMessage('Naive算法绘制线段')
+        self.list_widget.clearSelection()
+        self.canvas_widget.clear_selection()
+    
+    def line_dda_action(self):
+        self.canvas_widget.start_draw('line', 'DDA', self.get_id())
+        self.statusBar().showMessage('DDA算法绘制线段')
+        self.list_widget.clearSelection()
+        self.canvas_widget.clear_selection()
+        
+    def line_bresenham_action(self):
+        self.canvas_widget.start_draw('line', 'Bresenham', self.get_id())
+        self.statusBar().showMessage('Bresenham算法绘制线段')
+        self.list_widget.clearSelection()
+        self.canvas_widget.clear_selection()
+        
+    def ellipse_action(self):
+        self.canvas_widget.start_draw('ellipse', 0, self.get_id())
+        self.statusBar().showMessage('Bresenham算法绘制椭圆')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
 
