@@ -245,9 +245,21 @@ def draw_curve(p_list, algorithm):
     :return: (list of list of int: [[x_0, y_0], [x_1, y_1], [x_2, y_2], ...]) 绘制结果的像素点坐标列表
     """
     result = []
+    x_min, y_min = p_list[0]
+    x_max, y_max = p_list[0]
+    for x, y in p_list:
+        x_min = min(x_min, x)
+        x_max = max(x_max, x)
+        y_min = min(y_min, y)
+        y_max = max(y_max, y)
+    h = y_max - y_min + 2
+    w = x_max - x_min + 2
+    num = (w + h) * int(math.sqrt(len(p_list)))
     if algorithm == "Bezier":
-        for t in range(0, 1001):
-            result.append(Bezier(p_list, t * 0.001))
+        for t in range(0, num + 1):
+            result.append(Bezier(p_list, t / num))
+            if t > 0 and result[-1] == result[-2]:
+                result.pop()
     return result
 
 
