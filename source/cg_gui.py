@@ -22,6 +22,7 @@ from PyQt5.QtGui import QPainter, QMouseEvent, QColor
 from PyQt5.QtCore import QRectF
 from PyQt5.Qt import Qt
 from PyQt5 import QtCore
+import math
 
 
 
@@ -49,6 +50,8 @@ class MyCanvas(QGraphicsView):
         self.ycenter = 0
         self.w = 0
         self.h = 0
+        self.xstart = -1
+        self.ystart = -1
         
     def get_id(self):
         _id = str(self.item_cnt)
@@ -131,6 +134,22 @@ class MyCanvas(QGraphicsView):
             self.temp_item.p_list[1] = [x, y]
         elif self.status == 'translate':
             self.temp_item.p_list = alg.translate(self.p_list_copy, x - self.xcenter, y - self.ycenter)
+        elif self.status == 'rotate':
+            if self.xstart == -1:
+                self.xstart = x
+                self.ystart = y
+            else:
+                a = self.xstart - self.xcenter
+                b = self.ystart - self.ycenter
+                c = x - self.xcenter
+                d = y - self.ycenter
+                diff = a * d - b * c
+                Cos = (a * c + b * d) / math.sqrt(a * a + b * b) / math.sqrt(c * c + d * d)
+                angle = math.acos(Cos) / math.pi * 180 
+                if diff < 0:
+                    angle = 360 - angle
+                angle = 360 - angle
+                self.temp_item.p_list = alg.rotate(self.p_list_copy, self.xcenter, self.ycenter, angle)
         elif self.status == 'scale':
             s = max(0.1 ,1.0 + (x - self.xcenter) / self.w)
             self.temp_item.p_list = alg.scale(self.p_list_copy, self.xcenter, self.ycenter, s)
@@ -143,6 +162,9 @@ class MyCanvas(QGraphicsView):
             self.item_dict[self.temp_id] = self.temp_item
             self.list_widget.addItem(self.temp_id)
             self.finish_draw()
+        elif self.status == 'rotate':
+            self.xstart = -1
+            self.ystart = -1
         super().mouseReleaseEvent(event)
         
     def keyPressEvent(self, event):
