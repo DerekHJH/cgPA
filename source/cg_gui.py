@@ -13,13 +13,14 @@ from PyQt5.QtWidgets import (
     QGraphicsScene,
     QGraphicsView,
     QGraphicsItem,
+    QHBoxLayout,
     QListWidget,
     QMessageBox,
-    QHBoxLayout,
+    QRubberBand,
     QWidget,
     QStyleOptionGraphicsItem)
 from PyQt5.QtGui import QPainter, QMouseEvent, QColor
-from PyQt5.QtCore import QRectF
+from PyQt5.QtCore import QRectF, QRect, QSize
 from PyQt5.Qt import Qt
 from PyQt5 import QtCore
 import math
@@ -52,6 +53,8 @@ class MyCanvas(QGraphicsView):
         self.h = 0
         self.xstart = -1
         self.ystart = -1
+        
+        self.rb = QRubberBand(QRubberBand.Rectangle, self)
         
     def get_id(self):
         _id = str(self.item_cnt)
@@ -107,22 +110,26 @@ class MyCanvas(QGraphicsView):
             self.scene().addItem(self.temp_item)
         elif self.status == 'polygon' or self.status == 'curve':
             self.temp_item.p_list.append([x, y])
-        elif self.status == 'translate' or self.status == 'rotate' or self.status == 'scale':
+        elif self.status == 'translate' or self.status == 'rotate' or self.status == 'scale' or self.status == 'clip':
             self.p_list_copy = self.temp_item.p_list
             self.xcenter = x
             self.ycenter = y
-            x_min, y_min = self.p_list_copy[0]
-            x_max, y_max = self.p_list_copy[0]
-            for x, y in self.p_list_copy:
-                x_min = min(x_min, x)
-                y_min = min(y_min, y)
-                x_max = max(x_max, x)
-                y_max = max(y_max, y)
-                self.w = x_max - x_min
-                self.h = y_max - y_min
-            self.w += 2
-            self.h += 2
-        
+            if self.status =='scale' and hasattr(self.p_list_copy, '__len__') and len(self.p_list_copy) > 0:
+                x_min, y_min = self.p_list_copy[0]
+                x_max, y_max = self.p_list_copy[0]
+                for x, y in self.p_list_copy:
+                    x_min = min(x_min, x)
+                    y_min = min(y_min, y)
+                    x_max = max(x_max, x)
+                    y_max = max(y_max, y)
+                    self.w = x_max - x_min
+                    self.h = y_max - y_min
+                self.w += 2
+                self.h += 2
+            if self.status == 'clip':
+                self.origin  = event.pos()
+                self.rb.setGeometry(QRect(self.origin, QSize()))
+                self.rb.show()
         self.updateScene([self.sceneRect()])
         super().mousePressEvent(event)
 
@@ -153,6 +160,10 @@ class MyCanvas(QGraphicsView):
         elif self.status == 'scale':
             s = max(0.1 ,1.0 + (x - self.xcenter) / self.w)
             self.temp_item.p_list = alg.scale(self.p_list_copy, self.xcenter, self.ycenter, s)
+        elif self.status == 'clip':
+            self.xstart = x
+            self.ystart = y
+            self.rb.setGeometry(QRect(self.origin, event.pos()).normalized())
             
         self.updateScene([self.sceneRect()])
         super().mouseMoveEvent(event)
@@ -165,6 +176,10 @@ class MyCanvas(QGraphicsView):
         elif self.status == 'rotate':
             self.xstart = -1
             self.ystart = -1
+        elif self.status == 'clip':
+            self.rb.hide()
+            self.temp_item.p_list = alg.clip(self.p_list_copy, self.xcenter, self.ycenter, self.xstart, self.ystart, self.temp_algorithm)
+        self.updateScene([self.sceneRect()])
         super().mouseReleaseEvent(event)
         
     def keyPressEvent(self, event):
@@ -175,6 +190,7 @@ class MyCanvas(QGraphicsView):
                 self.finish_draw()
                 self.temp_item = MyItem(self.temp_id, self.status, [], self.temp_algorithm, self.color)
                 self.scene().addItem(self.temp_item)
+        self.updateScene([self.sceneRect()])
         super().keyPressEvent(event)
 
 
@@ -217,7 +233,7 @@ class MyItem(QGraphicsItem):
             painter.drawRect(self.boundingRect())
 
     def boundingRect(self) -> QRectF:
-        if len(self.p_list) > 0:
+        if hasattr(self.p_list, '__len__') and len(self.p_list) > 0:
             x_min, y_min = self.p_list[0]
             x_max, y_max = self.p_list[0]
             w = 0
@@ -310,6 +326,9 @@ class MainWindow(QMainWindow):
         translate_act.triggered.connect(self.translate_action)
         rotate_act.triggered.connect(self.rotate_action)
         scale_act.triggered.connect(self.scale_action)
+        
+        clip_cohen_sutherland_act.triggered.connect(self.clip_cohen_sutherland_action)
+        clip_liang_barsky_act.triggered.connect(self.clip_liang_barsky_action)
         
         self.list_widget.currentTextChanged.connect(self.canvas_widget.selection_changed)
 
@@ -435,6 +454,14 @@ class MainWindow(QMainWindow):
     def scale_action(self):
         self.statusBar().showMessage('缩放')
         self.canvas_widget.start_modify('scale')
+        
+    def clip_cohen_sutherland_action(self):
+        self.statusBar().showMessage('裁剪')
+        self.canvas_widget.start_modify('clip', 'Cohen-Sutherland')
+    
+    def clip_liang_barsky_action(self):
+        self.statusBar().showMessage('裁剪')
+        self.canvas_widget.start_modify('clip', 'Liang-Barsky')
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
