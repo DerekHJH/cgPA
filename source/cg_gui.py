@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (
     QGraphicsView,
     QGraphicsItem,
     QListWidget,
+    QMessageBox,
     QHBoxLayout,
     QWidget,
     QStyleOptionGraphicsItem)
@@ -31,6 +32,7 @@ class MyCanvas(QGraphicsView):
         super().__init__(*args)
         self.main_window = None
         self.list_widget = None
+        self.item_cnt = 0
         self.item_dict = {}
         self.selected_id = ''
 
@@ -38,22 +40,41 @@ class MyCanvas(QGraphicsView):
         self.temp_algorithm = ''
         self.temp_id = ''
         self.temp_item = None
+        self.p_list_copy = None
         
         self.color = QColor(0, 0, 0)
+        
+        self.xcenter = 0
+        self.ycenter = 0
+        
+    def get_id(self):
+        _id = str(self.item_cnt)
+        self.item_cnt += 1
+        return _id
     
     def set_pen_color(self, color):
             self.color = color
 
-    def start_draw(self, status, algorithm, item_id):
+    def start_draw(self, status, algorithm = ''):
         self.status = status
         self.temp_algorithm = algorithm
-        self.temp_id = item_id
+        self.temp_id = self.get_id()
         if self.status == 'curve' or self.status == 'polygon':
             self.temp_item = MyItem(self.temp_id, self.status, [], self.temp_algorithm, self.color)
             self.scene().addItem(self.temp_item)
 
     def finish_draw(self):
-        self.temp_id = self.main_window.get_id()
+        self.temp_id = self.get_id()
+    
+    def start_modify(self, status, algorithm = ''):
+        if self.selected_id == '':
+            QMessageBox.information(self, "Info", "Please select an item",
+                                    QMessageBox.Ok, QMessageBox.Ok)
+            return
+        self.status = status
+        self.temp_algorithm = algorithm
+        self.temp_id = self.selected_id
+        self.temp_item = self.item_dict[self.temp_id]
 
     def clear_selection(self):
         if self.selected_id != '':
@@ -80,6 +101,10 @@ class MyCanvas(QGraphicsView):
             self.scene().addItem(self.temp_item)
         elif self.status == 'polygon' or self.status == 'curve':
             self.temp_item.p_list.append([x, y])
+        elif self.status == 'translate' or self.status == 'rotate' or self.status == 'scale':
+            self.p_list_copy = self.temp_item.p_list
+            self.xcenter = x
+            self.ycenter = y
         
         self.updateScene([self.sceneRect()])
         super().mousePressEvent(event)
@@ -90,6 +115,9 @@ class MyCanvas(QGraphicsView):
         y = int(pos.y())
         if self.status == 'line' or self.status == 'ellipse':
             self.temp_item.p_list[1] = [x, y]
+        elif self.status == 'translate':
+            self.temp_item.p_list = alg.translate(self.p_list_copy, x - self.xcenter, y - self.ycenter)
+            
         self.updateScene([self.sceneRect()])
         super().mouseMoveEvent(event)
 
@@ -173,9 +201,6 @@ class MainWindow(QMainWindow):
     """
     def __init__(self):
         super().__init__()
-        self.item_cnt = 0
-        self.width = 600
-        self.height = 600
 
         # 使用QListWidget来记录已有的图元，并用于选择图元。
         #注：这是图元选择的简单实现方法，更好的实现是在画布中直接用鼠标选择图元
@@ -224,10 +249,10 @@ class MainWindow(QMainWindow):
         clip_liang_barsky_act = clip_menu.addAction('Liang-Barsky')
 
         # 连接信号和槽函数
-        exit_act.triggered.connect(qApp.quit)
         set_pen_act.triggered.connect(self.set_pen_action)
         reset_canvas_act.triggered.connect(self.reset_canvas_action)
         save_canvas_act.triggered.connect(self.save_canvas_action)
+        exit_act.triggered.connect(self.exit_action)
         
         line_naive_act.triggered.connect(self.line_naive_action)
         line_dda_act.triggered.connect(self.line_dda_action)
@@ -241,6 +266,10 @@ class MainWindow(QMainWindow):
         curve_bezier_act.triggered.connect(self.curve_bezier_action)
         curve_b_spline_act.triggered.connect(self.curve_b_spline_action)
         
+        translate_act.triggered.connect(self.translate_action)
+        rotate_act.triggered.connect(self.rotate_action)
+        scale_act.triggered.connect(self.scale_action)
+        
         self.list_widget.currentTextChanged.connect(self.canvas_widget.selection_changed)
 
         # 设置主窗口的布局
@@ -251,13 +280,9 @@ class MainWindow(QMainWindow):
         self.central_widget.setLayout(self.hbox_layout)
         self.setCentralWidget(self.central_widget)
         self.statusBar().showMessage('空闲')
-        self.resize(self.width, self.height)
+        self.resize(600, 600)
         self.setWindowTitle('CG Demo')
 
-    def get_id(self):
-        _id = str(self.item_cnt)
-        self.item_cnt += 1
-        return _id
     
     def set_pen_action(self):
         self.statusBar().showMessage('设置画笔')
@@ -268,9 +293,6 @@ class MainWindow(QMainWindow):
     
     def reset_canvas_action(self):
         self.statusBar().showMessage('重置画布')
-        self.item_cnt = 0
-        self.width = 600
-        self.height = 600
 
         self.list_widget = QListWidget(self)
         self.list_widget.setMinimumWidth(200)
@@ -292,66 +314,86 @@ class MainWindow(QMainWindow):
         self.central_widget = QWidget()
         self.central_widget.setLayout(self.hbox_layout)
         self.setCentralWidget(self.central_widget)
-        self.resize(self.width, self.height)
+        self.resize(600, 600)
         self.setWindowTitle('CG Demo')
         
     def save_canvas_action(self):
         self.statusBar().showMessage('保存画布')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
-        dialog = QFileDialog()
-        filename = dialog.getSaveFileName(filter = "Image Files(*.jpg *.png *.bmp)")
+        file_dialog = QFileDialog()
+        filename = file_dialog.getSaveFileName(filter = "Image Files(*.jpg *.png *.bmp)")
         if filename[0]:
-            res = self.canvas_widget.grab(self.canvas_widget.sceneRect().toRect())
-            res.save(filename[0])
+            ret = self.canvas_widget.grab(self.canvas_widget.sceneRect().toRect())
+            ret.save(filename[0])
+    
+    def exit_action(self):
+        self.statusBar().showMessage('退出')
+        reply = QMessageBox.question(self, "CG Demo", "是否保存画布",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self.save_canvas_action()
+        qApp.quit()
 
     def line_naive_action(self):
         self.statusBar().showMessage('Naive算法绘制线段')
-        self.canvas_widget.start_draw('line', 'Naive', self.get_id())
+        self.canvas_widget.start_draw('line', 'Naive')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
     
     def line_dda_action(self):
         self.statusBar().showMessage('DDA算法绘制线段')
-        self.canvas_widget.start_draw('line', 'DDA', self.get_id())
+        self.canvas_widget.start_draw('line', 'DDA')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
         
     def line_bresenham_action(self):
         self.statusBar().showMessage('Bresenham算法绘制线段')
-        self.canvas_widget.start_draw('line', 'Bresenham', self.get_id())
+        self.canvas_widget.start_draw('line', 'Bresenham')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
         
     def ellipse_action(self):
         self.statusBar().showMessage('Bresenham算法绘制椭圆')
-        self.canvas_widget.start_draw('ellipse', 0, self.get_id())
+        self.canvas_widget.start_draw('ellipse')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
 
     def polygon_dda_action(self):
         self.statusBar().showMessage('DDA算法绘制多边形')
-        self.canvas_widget.start_draw('polygon', 'DDA', self.get_id())
+        self.canvas_widget.start_draw('polygon', 'DDA')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
         
     def polygon_bresenham_action(self):
         self.statusBar().showMessage('Bresenham算法绘制多边形')
-        self.canvas_widget.start_draw('polygon', 'Bresenham', self.get_id())
+        self.canvas_widget.start_draw('polygon', 'Bresenham')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
         
     def curve_bezier_action(self):
         self.statusBar().showMessage('Bezier算法绘制曲线')
-        self.canvas_widget.start_draw('curve', 'Bezier', self.get_id())
+        self.canvas_widget.start_draw('curve', 'Bezier')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
         
     def curve_b_spline_action(self):
         self.statusBar().showMessage('B-spline算法绘制曲线')
-        self.canvas_widget.start_draw('curve', 'B-spline', self.get_id())
+        self.canvas_widget.start_draw('curve', 'B-spline')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()
+        
+    def translate_action(self):
+        self.statusBar().showMessage('平移')
+        self.canvas_widget.start_modify('translate')
+    
+    def rotate_action(self):
+        self.statusBar().showMessage('旋转')
+        self.canvas_widget.start_modify('rotate')
+    
+    def scale_action(self):
+        self.statusBar().showMessage('缩放')
+        self.canvas_widget.start_modify('scale')
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
