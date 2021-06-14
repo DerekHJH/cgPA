@@ -24,6 +24,7 @@ from PyQt5.Qt import Qt
 from PyQt5 import QtCore
 
 
+
 class MyCanvas(QGraphicsView):
     """
     画布窗体类，继承自QGraphicsView，采用QGraphicsView、QGraphicsScene、QGraphicsItem的绘图框架
@@ -46,6 +47,8 @@ class MyCanvas(QGraphicsView):
         
         self.xcenter = 0
         self.ycenter = 0
+        self.w = 0
+        self.h = 0
         
     def get_id(self):
         _id = str(self.item_cnt)
@@ -105,6 +108,17 @@ class MyCanvas(QGraphicsView):
             self.p_list_copy = self.temp_item.p_list
             self.xcenter = x
             self.ycenter = y
+            x_min, y_min = self.p_list_copy[0]
+            x_max, y_max = self.p_list_copy[0]
+            for x, y in self.p_list_copy:
+                x_min = min(x_min, x)
+                y_min = min(y_min, y)
+                x_max = max(x_max, x)
+                y_max = max(y_max, y)
+                self.w = x_max - x_min
+                self.h = y_max - y_min
+            self.w += 2
+            self.h += 2
         
         self.updateScene([self.sceneRect()])
         super().mousePressEvent(event)
@@ -117,6 +131,9 @@ class MyCanvas(QGraphicsView):
             self.temp_item.p_list[1] = [x, y]
         elif self.status == 'translate':
             self.temp_item.p_list = alg.translate(self.p_list_copy, x - self.xcenter, y - self.ycenter)
+        elif self.status == 'scale':
+            s = max(0.1 ,1.0 + (x - self.xcenter) / self.w)
+            self.temp_item.p_list = alg.scale(self.p_list_copy, self.xcenter, self.ycenter, s)
             
         self.updateScene([self.sceneRect()])
         super().mouseMoveEvent(event)
@@ -193,6 +210,8 @@ class MyItem(QGraphicsItem):
             return QRectF(x_min - 1, y_min - 1, w + 2, h + 2)
         else:
             return QRectF(0, 0, 1, 1)
+    
+        
 
 
 class MainWindow(QMainWindow):
