@@ -102,69 +102,78 @@ class MyCanvas(QGraphicsView):
         self.updateScene([self.sceneRect()])
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        pos = self.mapToScene(event.localPos().toPoint())
-        x = int(pos.x())
-        y = int(pos.y())
-        if self.status == 'line' or self.status == 'ellipse':
-            self.temp_item = MyItem(self.temp_id, self.status, [[x, y], [x, y]], self.temp_algorithm, self.color)
-            self.scene().addItem(self.temp_item)
-        elif self.status == 'polygon' or self.status == 'curve':
-            self.temp_item.p_list.append([x, y])
-        elif self.status == 'translate' or self.status == 'rotate' or self.status == 'scale' or self.status == 'clip':
-            self.p_list_copy = self.temp_item.p_list
-            self.xcenter = x
-            self.ycenter = y
-            if self.status =='scale' and hasattr(self.p_list_copy, '__len__') and len(self.p_list_copy) > 0:
-                x_min, y_min = self.p_list_copy[0]
-                x_max, y_max = self.p_list_copy[0]
-                for x, y in self.p_list_copy:
-                    x_min = min(x_min, x)
-                    y_min = min(y_min, y)
-                    x_max = max(x_max, x)
-                    y_max = max(y_max, y)
-                    self.w = x_max - x_min
-                    self.h = y_max - y_min
-                self.w += 2
-                self.h += 2
-            if self.status == 'clip':
-                self.origin  = event.pos()
-                self.rb.setGeometry(QRect(self.origin, QSize()))
-                self.rb.show()
+        if event.buttons() == QtCore.Qt.LeftButton:
+            pos = self.mapToScene(event.localPos().toPoint())
+            x = int(pos.x())
+            y = int(pos.y())
+            if self.status == 'line' or self.status == 'ellipse':
+                self.temp_item = MyItem(self.temp_id, self.status, [[x, y], [x, y]], self.temp_algorithm, self.color)
+                self.scene().addItem(self.temp_item)
+            elif self.status == 'polygon' or self.status == 'curve':
+                self.temp_item.p_list.append([x, y])
+            elif self.status == 'translate' or self.status == 'rotate' or self.status == 'scale' or self.status == 'clip':
+                self.p_list_copy = self.temp_item.p_list
+                self.xcenter = x
+                self.ycenter = y
+                if self.status =='scale' and hasattr(self.p_list_copy, '__len__') and len(self.p_list_copy) > 0:
+                    x_min, y_min = self.p_list_copy[0]
+                    x_max, y_max = self.p_list_copy[0]
+                    for x, y in self.p_list_copy:
+                        x_min = min(x_min, x)
+                        y_min = min(y_min, y)
+                        x_max = max(x_max, x)
+                        y_max = max(y_max, y)
+                        self.w = x_max - x_min
+                        self.h = y_max - y_min
+                    self.w += 2
+                    self.h += 2
+                if self.status == 'clip':
+                    self.origin  = event.pos()
+                    self.rb.setGeometry(QRect(self.origin, QSize()))
+                    self.rb.show()
+        elif event.buttons() == QtCore.Qt.RightButton:
+            if self.status == 'polygon' or self.status == 'curve':
+                self.item_dict[self.temp_id] = self.temp_item
+                self.list_widget.addItem(self.temp_id)
+                self.finish_draw()
+                self.temp_item = MyItem(self.temp_id, self.status, [], self.temp_algorithm, self.color)
+                self.scene().addItem(self.temp_item)
         self.updateScene([self.sceneRect()])
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        pos = self.mapToScene(event.localPos().toPoint())
-        x = int(pos.x())
-        y = int(pos.y())
-        if self.status == 'line' or self.status == 'ellipse':
-            self.temp_item.p_list[1] = [x, y]
-        elif self.status == 'translate':
-            self.temp_item.p_list = alg.translate(self.p_list_copy, x - self.xcenter, y - self.ycenter)
-        elif self.status == 'rotate':
-            if self.xstart == -1:
+        if event.buttons() == QtCore.Qt.LeftButton:
+            pos = self.mapToScene(event.localPos().toPoint())
+            x = int(pos.x())
+            y = int(pos.y())
+            if self.status == 'line' or self.status == 'ellipse':
+                self.temp_item.p_list[1] = [x, y]
+            elif self.status == 'translate':
+                self.temp_item.p_list = alg.translate(self.p_list_copy, x - self.xcenter, y - self.ycenter)
+            elif self.status == 'rotate':
+                if self.xstart == -1:
+                    self.xstart = x
+                    self.ystart = y
+                else:
+                    a = self.xstart - self.xcenter
+                    b = self.ystart - self.ycenter
+                    c = x - self.xcenter
+                    d = y - self.ycenter
+                    diff = a * d - b * c
+                    Cos = (a * c + b * d) / math.sqrt(a * a + b * b) / math.sqrt(c * c + d * d)
+                    angle = math.acos(Cos) / math.pi * 180 
+                    if diff < 0:
+                        angle = 360 - angle
+                    angle = 360 - angle
+                    self.temp_item.p_list = alg.rotate(self.p_list_copy, self.xcenter, self.ycenter, angle)
+            elif self.status == 'scale':
+                s = max(0.1 ,1.0 + (x - self.xcenter) / self.w)
+                self.temp_item.p_list = alg.scale(self.p_list_copy, self.xcenter, self.ycenter, s)
+            elif self.status == 'clip':
                 self.xstart = x
                 self.ystart = y
-            else:
-                a = self.xstart - self.xcenter
-                b = self.ystart - self.ycenter
-                c = x - self.xcenter
-                d = y - self.ycenter
-                diff = a * d - b * c
-                Cos = (a * c + b * d) / math.sqrt(a * a + b * b) / math.sqrt(c * c + d * d)
-                angle = math.acos(Cos) / math.pi * 180 
-                if diff < 0:
-                    angle = 360 - angle
-                angle = 360 - angle
-                self.temp_item.p_list = alg.rotate(self.p_list_copy, self.xcenter, self.ycenter, angle)
-        elif self.status == 'scale':
-            s = max(0.1 ,1.0 + (x - self.xcenter) / self.w)
-            self.temp_item.p_list = alg.scale(self.p_list_copy, self.xcenter, self.ycenter, s)
-        elif self.status == 'clip':
-            self.xstart = x
-            self.ystart = y
-            self.rb.setGeometry(QRect(self.origin, event.pos()).normalized())
-            
+                self.rb.setGeometry(QRect(self.origin, event.pos()).normalized())
+                
         self.updateScene([self.sceneRect()])
         super().mouseMoveEvent(event)
 
@@ -181,17 +190,6 @@ class MyCanvas(QGraphicsView):
             self.temp_item.p_list = alg.clip(self.p_list_copy, self.xcenter, self.ycenter, self.xstart, self.ystart, self.temp_algorithm)
         self.updateScene([self.sceneRect()])
         super().mouseReleaseEvent(event)
-        
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Space:
-            if self.status == 'polygon' or self.status == 'curve':
-                self.item_dict[self.temp_id] = self.temp_item
-                self.list_widget.addItem(self.temp_id)
-                self.finish_draw()
-                self.temp_item = MyItem(self.temp_id, self.status, [], self.temp_algorithm, self.color)
-                self.scene().addItem(self.temp_item)
-        self.updateScene([self.sceneRect()])
-        super().keyPressEvent(event)
 
 
 class MyItem(QGraphicsItem):
@@ -456,11 +454,11 @@ class MainWindow(QMainWindow):
         self.canvas_widget.start_modify('scale')
         
     def clip_cohen_sutherland_action(self):
-        self.statusBar().showMessage('裁剪')
+        self.statusBar().showMessage('Cohen_Sutherland算法裁剪')
         self.canvas_widget.start_modify('clip', 'Cohen-Sutherland')
     
     def clip_liang_barsky_action(self):
-        self.statusBar().showMessage('裁剪')
+        self.statusBar().showMessage('Liang_Barsky算法裁剪')
         self.canvas_widget.start_modify('clip', 'Liang-Barsky')
 
 if __name__ == '__main__':
