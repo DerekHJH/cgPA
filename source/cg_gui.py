@@ -227,6 +227,7 @@ class MyItem(QGraphicsItem):
         
         for i in range(len(item_pixels)):
             item_pixels[i][1] = self.height - 1 - item_pixels[i][1]
+        painter.setPen(self.color)
         for p in item_pixels:
             painter.drawPoint(*p)
         if self.selected:

@@ -392,10 +392,9 @@ def clip(p_list, x0, y0, x1, y1, algorithm):
         m = dy / dx
         mT = dx / dy
         
-        area_diff = area_code0 ^ area_code1
-        
         
         for i in range(4):
+            area_diff = area_code0 ^ area_code1
             if area_diff & (1 << i) and i == 0:
                 if y0 > y1:
                     x0 = int(x0 + mT * (y_max - y0))
@@ -424,8 +423,6 @@ def clip(p_list, x0, y0, x1, y1, algorithm):
         
             if (area_code0 & area_code1) != 0:
                 return result
-        print(x0, y0, x1, y1)
-        print(x_min, y_min, x_max, y_max)
     elif algorithm == "Liang-Barsky":
         dx = x1 - x0
         dy = y1 - y0
