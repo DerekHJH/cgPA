@@ -38,6 +38,7 @@ class MyCanvas(QGraphicsView):
         self.item_cnt = 0
         self.item_dict = {}
         self.selected_id = ''
+        self.height = 600
 
         self.status = ''
         self.temp_algorithm = ''
@@ -105,7 +106,7 @@ class MyCanvas(QGraphicsView):
         if event.buttons() == QtCore.Qt.LeftButton:
             pos = self.mapToScene(event.localPos().toPoint())
             x = int(pos.x())
-            y = int(pos.y())
+            y = self.height - 1 - int(pos.y())
             if self.status == 'line' or self.status == 'ellipse':
                 self.temp_item = MyItem(self.temp_id, self.status, [[x, y], [x, y]], self.temp_algorithm, self.color)
                 self.scene().addItem(self.temp_item)
@@ -145,7 +146,7 @@ class MyCanvas(QGraphicsView):
         if event.buttons() == QtCore.Qt.LeftButton:
             pos = self.mapToScene(event.localPos().toPoint())
             x = int(pos.x())
-            y = int(pos.y())
+            y = self.height - 1 - int(pos.y())
             if self.status == 'line' or self.status == 'ellipse':
                 self.temp_item.p_list[1] = [x, y]
             elif self.status == 'translate':
@@ -212,6 +213,7 @@ class MyItem(QGraphicsItem):
         self.algorithm = algorithm  # 绘制算法，'DDA'、'Bresenham'、'Bezier'、'B-spline'等
         self.selected = False
         self.color = color
+        self.height = 600
 
     def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: Optional[QWidget] = ...) -> None:
         if self.item_type == 'line':
@@ -223,7 +225,8 @@ class MyItem(QGraphicsItem):
         elif self.item_type == 'curve':
             item_pixels = alg.draw_curve(self.p_list, self.algorithm)
         
-        painter.setPen(self.color)
+        for i in range(len(item_pixels)):
+            item_pixels[i][1] = self.height - 1 - item_pixels[i][1]
         for p in item_pixels:
             painter.drawPoint(*p)
         if self.selected:
@@ -243,7 +246,7 @@ class MyItem(QGraphicsItem):
                 y_max = max(y_max, y)
                 w = x_max - x_min
                 h = y_max - y_min
-            return QRectF(x_min - 1, y_min - 1, w + 2, h + 2)
+            return QRectF(x_min - 1, self.height - y_max, w + 2, h + 2)
         else:
             return QRectF(0, 0, 1, 1)
     
@@ -412,7 +415,7 @@ class MainWindow(QMainWindow):
         self.canvas_widget.clear_selection()
         
     def ellipse_action(self):
-        self.statusBar().showMessage('Bresenham算法绘制椭圆')
+        self.statusBar().showMessage('中点圆算法绘制椭圆')
         self.canvas_widget.start_draw('ellipse')
         self.list_widget.clearSelection()
         self.canvas_widget.clear_selection()

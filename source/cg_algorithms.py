@@ -30,7 +30,7 @@ def draw_line(p_list, algorithm):
 	#handle four specific situations
     if x0 == x1:
         for y in range(min(y0, y1), max(y0, y1) + 1):
-            result.append((x0, y))
+            result.append([x0, y])
         return result
 		
     if x0 > x1:
@@ -38,7 +38,7 @@ def draw_line(p_list, algorithm):
 
     if y0 == y1:
         for x in range(x0, x1 + 1):
-            result.append((x, y0))
+            result.append([x, y0])
         return result
 
     dx = x1 - x0
@@ -46,19 +46,19 @@ def draw_line(p_list, algorithm):
 
     if dx == dy:
         for d in range(dx + 1):
-            result.append((x0 + d, y0 + d))
+            result.append([x0 + d, y0 + d])
         return result
 
     if dx == -dy:
         for d in range(dx + 1):
-        	result.append((x0 + d, y0 - d))
+        	result.append([x0 + d, y0 - d])
         return result
 
 	#other ordinary cases
     if algorithm == 'Naive':
         k = (y1 - y0) / (x1 - x0)
         for x in range(x0, x1 + 1):
-            result.append((x, int(y0 + k * (x - x0))))
+            result.append([x, int(y0 + k * (x - x0))])
 
     elif algorithm == 'DDA':
         m = float(dy) / float(dx)
@@ -68,14 +68,14 @@ def draw_line(p_list, algorithm):
                 x = x0
                 y = float(y0)
                 for i in range(dx + 1):
-                    result.append((x, round(y)))
+                    result.append([x, round(y)])
                     x = x + 1
                     y = y + m
             elif dx < dy:
                 x = float(x0)
                 y = y0
                 for i in range(dy + 1):
-                    result.append((round(x), y))
+                    result.append([round(x), y])
                     x = x + M
                     y = y + 1
 		
@@ -85,14 +85,14 @@ def draw_line(p_list, algorithm):
                 x = x0
                 y = float(y0)
                 for i in range(dx + 1):
-                    result.append((x, round(y)))
+                    result.append([x, round(y)])
                     x = x + 1
                     y = y + m
             elif dx < neg_dy:
                 x = float(x0)
                 y = y0
                 for i in range(neg_dy + 1):
-                    result.append((round(x), y))
+                    result.append([round(x), y])
                     x = x - M
                     y = y - 1
 
@@ -106,7 +106,7 @@ def draw_line(p_list, algorithm):
                 p = _2dy - dx
                 inc = _2dy - _2dx
                 for i in range(dx + 1):
-                    result.append((x, y))
+                    result.append([x, y])
                     if(p > 0):
                         x = x + 1
                         y = y + 1
@@ -119,7 +119,7 @@ def draw_line(p_list, algorithm):
                 p = _2dx - dy
                 inc = _2dx - _2dy
                 for i in range(dy + 1):
-                    result.append((x, y))
+                    result.append([x, y])
                     if(p > 0):
                         x = x + 1
                         y = y + 1
@@ -135,7 +135,7 @@ def draw_line(p_list, algorithm):
                 p = neg_2dy - dx
                 inc = neg_2dy - _2dx
                 for i in range(dx + 1):
-                    result.append((x, y))
+                    result.append([x, y])
                     if(p > 0):
                         x = x + 1
                         y = y - 1
@@ -148,7 +148,7 @@ def draw_line(p_list, algorithm):
                 p = _2dx - neg_dy
                 inc = _2dx - neg_2dy
                 for i in range(neg_dy + 1):
-                    result.append((x, y))
+                    result.append([x, y])
                     if(p > 0):
                         x = x + 1
                         y = y - 1
@@ -243,6 +243,12 @@ def Bezier(p_list, t):
             yt[i].append(yt[i - 1][j] * (1 - t) + yt[i - 1][j + 1] * t)
     return [int(xt[n][0]), int(yt[n][0])]
 
+def deBoor_Cox(i, k, u):
+    if k == 1:
+        return (i <= u and u < i + 1)
+    else:
+        return (deBoor_Cox(i, k - 1, u) * (u - i) + deBoor_Cox(i + 1, k - 1, u) * (i + k - u)) / (k - 1)
+
 def draw_curve(p_list, algorithm):
     """绘制曲线
 
@@ -266,8 +272,19 @@ def draw_curve(p_list, algorithm):
     if algorithm == "Bezier":
         for t in range(0, num + 1):
             result.append(Bezier(p_list, t / num))
-            if t > 0 and result[-1] == result[-2]:
-                result.pop()
+    elif algorithm == 'B-spline':
+        k = 3
+        n = len(p_list) - 1
+        if k > n + 1:
+            return []
+        for u in range(0, num + 1):
+            x, y = 0, 0
+            for i in range(n + 1):
+                ret = deBoor_Cox(i, k + 1, k + u / num * (n + 1 - k))
+                x += p_list[i][0] * ret
+                y += p_list[i][1] * ret
+                
+            result.append([int(x), int(y)])
     return result
 
 
@@ -377,7 +394,8 @@ def clip(p_list, x0, y0, x1, y1, algorithm):
         
         area_diff = area_code0 ^ area_code1
         
-        for i in range(3):
+        
+        for i in range(4):
             if area_diff & (1 << i) and i == 0:
                 if y0 > y1:
                     x0 = int(x0 + mT * (y_max - y0))
@@ -406,6 +424,8 @@ def clip(p_list, x0, y0, x1, y1, algorithm):
         
             if (area_code0 & area_code1) != 0:
                 return result
+        print(x0, y0, x1, y1)
+        print(x_min, y_min, x_max, y_max)
     elif algorithm == "Liang-Barsky":
         dx = x1 - x0
         dy = y1 - y0
